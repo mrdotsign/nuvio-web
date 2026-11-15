@@ -78,10 +78,18 @@ export type EngineCommand =
 
 export const ENGINE_EVENT = "nuvio:engine";
 
+/** Whether the app's window is fullscreen, as a boolean `detail`, on each change. */
+export const FULLSCREEN_EVENT = "nuvio:fullscreen";
+
 export interface DesktopEngine {
 	open: (request: MpvRequest) => void;
 	command: (command: EngineCommand) => void;
 	close: () => void;
+	/**
+	 * Toggles the app's window fullscreen. The page's own fullscreen would move
+	 * it to a window of WebKit's, away from mpv drawing under this one.
+	 */
+	fullscreen: () => void;
 	/** Every source plays in the engine (`NUVIO_MPV_ENGINE=always`), not only those the web view refuses. */
 	always?: boolean;
 }

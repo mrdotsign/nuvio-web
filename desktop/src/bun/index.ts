@@ -160,6 +160,7 @@ const ENGINE_BRIDGE = `Object.assign(window.nuvioDesktop, { engine: {
 	open: (request) => window.__electrobunSendToHost({ nuvioEngine: { op: "open", request } }),
 	command: (command) => window.__electrobunSendToHost({ nuvioEngine: { op: "command", command } }),
 	close: () => window.__electrobunSendToHost({ nuvioEngine: { op: "close" } }),
+	fullscreen: () => window.__electrobunSendToHost({ nuvioEngine: { op: "fullscreen" } }),
 	always: ${process.env.NUVIO_MPV_ENGINE === "always"},
 } });`;
 
@@ -266,6 +267,8 @@ for (const name of ["did-navigate", "dom-ready"] as const) {
 		});
 	});
 }
+window.on("resize", () => dispatch("nuvio:fullscreen", window.isFullScreen()));
+
 /** Only well-formed engine requests from the page reach mpv. */
 function handleEngine(message: {
 	op?: unknown;
@@ -284,6 +287,8 @@ function handleEngine(message: {
 		}
 	} else if (message.op === "close") {
 		engine.close();
+	} else if (message.op === "fullscreen") {
+		window.setFullScreen(!window.isFullScreen());
 	} else if (message.op === "command") {
 		const command = parseEngineCommand(message.command);
 		if (command) {

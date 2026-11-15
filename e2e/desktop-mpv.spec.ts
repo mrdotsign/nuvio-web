@@ -11,7 +11,11 @@ const STREAM = "https://cdn.example/episode.mkv";
 declare global {
 	interface Window {
 		__mpv: { requests: { url: string; start: number }[]; stops: number };
-		__engine: { opened: number; commands: Record<string, unknown>[] };
+		__engine: {
+			opened: number;
+			commands: Record<string, unknown>[];
+			fullscreens: number;
+		};
 	}
 }
 
@@ -99,7 +103,7 @@ test("desktop: the in-window engine gets the player's volume, audio and subtitle
 }) => {
 	await signIn(context);
 	await context.addInitScript((videoId) => {
-		window.__engine = { opened: 0, commands: [] };
+		window.__engine = { opened: 0, commands: [], fullscreens: 0 };
 		window.nuvioDesktop = {
 			engine: {
 				open: () => {
@@ -107,6 +111,9 @@ test("desktop: the in-window engine gets the player's volume, audio and subtitle
 				},
 				command: (command) => window.__engine.commands.push(command),
 				close: () => undefined,
+				fullscreen: () => {
+					window.__engine.fullscreens += 1;
+				},
 			},
 		};
 		sessionStorage.setItem(
@@ -189,6 +196,22 @@ test("desktop: the in-window engine gets the player's volume, audio and subtitle
 	await expect(
 		engine.getByRole("button", { name: "Picture in picture" }),
 	).toHaveCount(0);
+
+	// The app's window goes fullscreen, not the page: WebKit's own fullscreen
+	// window would leave mpv behind, drawing in this one.
+	await page.keyboard.press("Escape");
+	await engine.hover();
+	await engine.getByRole("button", { name: "Fullscreen", exact: true }).click();
+	await expect
+		.poll(() => page.evaluate(() => window.__engine.fullscreens))
+		.toBe(1);
+	expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
+	await page.evaluate(() =>
+		window.dispatchEvent(new CustomEvent("nuvio:fullscreen", { detail: true })),
+	);
+	await expect(
+		engine.getByRole("button", { name: "Exit fullscreen" }),
+	).toBeVisible();
 
 	await page.waitForTimeout(500);
 	expect(errors, "runtime errors").toEqual([]);

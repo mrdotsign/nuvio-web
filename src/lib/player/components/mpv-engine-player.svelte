@@ -11,6 +11,7 @@
 		ENGINE_EVENT,
 		type EngineState,
 		type EngineTrack,
+		FULLSCREEN_EVENT,
 	} from "#lib/player/desktop-mpv.js";
 	import {
 		activeEngineCaption,
@@ -152,12 +153,9 @@
 		showControls();
 	}
 
-	async function toggleFullscreen() {
-		if (document.fullscreenElement) {
-			await document.exitFullscreen();
-		} else {
-			await document.documentElement.requestFullscreen();
-		}
+	function toggleFullscreen() {
+		engine.fullscreen();
+		return Promise.resolve();
 	}
 
 	function setVolume(volume: number) {
@@ -274,17 +272,17 @@
 			transport.ended = state.ended;
 			tracks = state.tracks ?? [];
 		};
-		const onFullscreen = () => {
-			transport.fullscreen = Boolean(document.fullscreenElement);
+		const onFullscreen = (event: Event) => {
+			transport.fullscreen = (event as CustomEvent<boolean>).detail;
 		};
 		window.addEventListener(ENGINE_EVENT, onState);
-		document.addEventListener("fullscreenchange", onFullscreen);
+		window.addEventListener(FULLSCREEN_EVENT, onFullscreen);
 		document.documentElement.classList.add("mpv-engine");
 		showControls();
 		return () => {
 			clearTimeout(idleTimer);
 			window.removeEventListener(ENGINE_EVENT, onState);
-			document.removeEventListener("fullscreenchange", onFullscreen);
+			window.removeEventListener(FULLSCREEN_EVENT, onFullscreen);
 			document.documentElement.classList.remove("mpv-engine");
 		};
 	});

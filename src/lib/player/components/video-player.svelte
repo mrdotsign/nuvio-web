@@ -100,7 +100,7 @@
 		tryRemux: () => fixSource("container"),
 		onFatal: (message) => {
 			fatalError = message;
-			onUnplayable?.(transport.currentTime);
+			onUnplayable?.(transport.currentTime || startTime);
 		},
 		onEnded: () => onEnded?.(),
 	});
@@ -180,7 +180,7 @@
 			onLoad: resetForNewSource,
 			onFatal: (message) => {
 				fatalError = message;
-				onUnplayable?.(transport.currentTime);
+				onUnplayable?.(transport.currentTime || startTime);
 			},
 			audioPreference: () => ({
 				languages: audioLanguages,
