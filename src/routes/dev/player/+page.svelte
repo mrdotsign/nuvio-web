@@ -51,7 +51,9 @@
 	const audioLanguages = $derived(
 		page.url.searchParams.get("audiolang")?.split(",") ?? [],
 	);
-	const initialAudioTrack = $derived(
+	// Held as state, like the watch route's: a pick feeds back in as the
+	// initial track.
+	let initialAudioTrack = $state(
 		page.url.searchParams.has("audio")
 			? Number(page.url.searchParams.get("audio"))
 			: null,
@@ -147,6 +149,9 @@
     detailHref="/detail/movie/tt0111161"
     onProgress={(position, duration) => (lastProgress = { position, duration })}
     onEnded={() => (ended = true)}
+    onPlaybackSettings={(patch) => {
+      initialAudioTrack = patch.audioTrack ?? initialAudioTrack;
+    }}
     onOutro={() => {
       outro = true;
       minimized = true;

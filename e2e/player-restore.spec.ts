@@ -41,6 +41,39 @@ test("an audio track restored from the URL beats the language", async ({
 	expect(errors, "runtime errors").toEqual([]);
 });
 
+test("switching the audio of a remuxed file keeps the remux running", async ({
+	page,
+}) => {
+	const errors = collectRuntimeErrors(page);
+	await page.goto(DUAL);
+	expect(await checkedAudioTrack(page)).toContain("Ita Ac3");
+	await expect
+		.poll(() => page.evaluate(() => document.querySelector("video")?.src))
+		.toMatch(/^blob:/);
+	// Every source the element is handed from here on.
+	await page.evaluate(() => {
+		const video = document.querySelector("video");
+		const seen: string[] = [];
+		Object.assign(window, { __sources: seen });
+		new MutationObserver(() =>
+			seen.push(video?.getAttribute("src") ?? ""),
+		).observe(video as HTMLVideoElement, {
+			attributes: true,
+			attributeFilter: ["src"],
+		});
+	});
+	await page.getByRole("menuitemradio", { name: /Eng Ac3/ }).click();
+	expect(await checkedAudioTrack(page)).toContain("Eng Ac3");
+	await page.waitForTimeout(1000);
+	const sources = await page.evaluate(
+		() => (window as unknown as { __sources: string[] }).__sources,
+	);
+	expect(sources, "the raw file is never handed back").not.toContainEqual(
+		expect.stringContaining("dual-audio.mkv"),
+	);
+	expect(errors, "runtime errors").toEqual([]);
+});
+
 test("a volume boost restored from the URL comes back with playback", async ({
 	page,
 }) => {

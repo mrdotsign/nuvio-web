@@ -1,4 +1,5 @@
 import type Hls from "hls.js";
+import { untrack } from "svelte";
 import { m } from "#lib/i18n/index.js";
 import { preferredTrackIndex } from "#lib/player/audio-language.js";
 import {
@@ -263,16 +264,20 @@ export function createPlayerMedia(deps: MediaDeps) {
 		}
 		// Same source, new pipeline : playback state carries over.
 		const fix = sourceFix.active;
-		if (fix) {
-			return attachTransmux(el, fix, hooks);
-		}
-		deps.onLoad();
-		audioTracks = [];
-		activeAudioTrack = -1;
-		preferenceApplied = false;
-		return src.toLowerCase().includes(".m3u8")
-			? attachHls(el, src, hooks)
-			: attachNative(el, src, hooks);
+		// Only the element, the source and the fix re-attach: the audio
+		// preference read on the way would tear the pipeline down on every pick.
+		return untrack(() => {
+			if (fix) {
+				return attachTransmux(el, fix, hooks);
+			}
+			deps.onLoad();
+			audioTracks = [];
+			activeAudioTrack = -1;
+			preferenceApplied = false;
+			return src.toLowerCase().includes(".m3u8")
+				? attachHls(el, src, hooks)
+				: attachNative(el, src, hooks);
+		});
 	});
 
 	return {
