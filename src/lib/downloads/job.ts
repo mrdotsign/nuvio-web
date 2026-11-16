@@ -178,7 +178,6 @@ async function sniffPlaylist(job: Job): Promise<string | null> {
 	if (looksLikeHls(record.sourceUrl, contentType) || head === "#EXTM3U") {
 		return fetchText(job, record.sourceUrl, "The playlist");
 	}
-	// biome-ignore lint/suspicious/noUnnecessaryConditions: RegExp#exec returns null on no match (Biome 2.5.14 infers it as non-null; TypeScript does not)
 	const total = /\/(\d+)$/.exec(probe.headers.get("content-range") ?? "")?.[1];
 	plan.totalBytes = total ? Number(total) : null;
 	plan.mimeType = contentType?.split(";")[0] ?? null;

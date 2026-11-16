@@ -869,7 +869,6 @@
 	"settings_addons_configure_title": "Ouvrir la page de configuration de cet addon",
 	"settings_addons_description": "Catalogues, métadonnées, flux et sous-titres pour ce profil.",
 	"settings_addons_dialog_description": "Collez l'URL du manifeste d'un addon Stremio.",
-	"settings_addons_disable": "Désactiver {name}",
 	"settings_addons_disabled": "Désactivé",
 	"settings_addons_shared": "Ce sont les addons de {name} : ce profil utilise les addons du profil principal. Modifiez-les depuis {name}, ou arrêtez de les partager dans Gérer les profils.",
 	"settings_addons_shared_readonly": "Ce profil utilise les addons du profil principal : modifiez-les depuis le profil principal.",
@@ -877,7 +876,6 @@
 	"settings_addons_drag": "Glisser pour réorganiser",
 	"settings_addons_empty_description": "Commencez par un fournisseur de métadonnées : catalogues, affiches et détails. Ajoutez vous-même un fournisseur de flux une fois prêt.",
 	"settings_addons_empty_title": "Aucun addon pour l'instant",
-	"settings_addons_enable": "Activer {name}",
 	"settings_addons_errors": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],

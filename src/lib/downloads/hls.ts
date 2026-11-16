@@ -94,7 +94,6 @@ function parseVariant(
 	return {
 		url: resolveUri(uri, baseUrl),
 		bandwidth: Number(attributes.BANDWIDTH) || 0,
-		// biome-ignore lint/suspicious/noUnnecessaryConditions: RegExp#exec returns null on no match (Biome 2.5.14 infers it as non-null; TypeScript does not)
 		height: resolution ? Number(resolution[2]) : null,
 		attributes,
 		audioGroup: attributes.AUDIO ?? null,
@@ -225,7 +224,6 @@ function parseByteRange(
 function extensionOf(uri: string, fallback: string): string {
 	const path = uri.split(/[?#]/)[0];
 	const match = /\.([a-z0-9]{2,5})$/i.exec(path);
-	// biome-ignore lint/suspicious/noUnnecessaryConditions: RegExp#exec returns null on no match (Biome 2.5.14 infers it as non-null; TypeScript does not)
 	return match ? match[1].toLowerCase() : fallback;
 }
 

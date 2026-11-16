@@ -24,7 +24,7 @@
 			"preset": "all",
 			"nursery": {
 				"recommended": true,
-				"useSortedClasses": "error",
+				"useTailwindSortedClasses": "error",
 				"noFloatingPromises": "error",
 				"noMisusedPromises": "error",
 				"useExplicitType": "off"
@@ -62,7 +62,13 @@
 				"noExcessiveClassesPerFile": "off",
 				"noIncrementDecrement": "off",
 				"useAtIndex": "off",
-				"noNegationElse": "off"
+				"noNegationElse": "off",
+				"useUnicodeRegex": "off",
+				"useConsistentTestIt": "off",
+				"useNamedCaptureGroup": "off",
+				"useImportsFirst": "off",
+				"useThisInClassMethods": "off",
+				"noInlineStyles": "off"
 			},
 			"complexity": {
 				"noExcessiveCognitiveComplexity": "error",
@@ -75,14 +81,18 @@
 				"noVoid": "off",
 				"noRedundantDefaultExport": "off",
 				"useMaxParams": "error",
-				"noImplicitCoercions": "off"
+				"noImplicitCoercions": "off",
+				"useWhile": "off",
+				"useArraySome": "off"
 			},
 			"correctness": {
 				"noNodejsModules": "off",
 				"noUnresolvedImports": "off",
 				"useImportExtensions": "off",
 				"useQwikValidLexicalScope": "off",
-				"noUnusedImports": "warn"
+				"noUnusedImports": "warn",
+				"usePlaywrightValidDescribeCallback": "off",
+				"noComponentHookFactories": "off"
 			},
 			"suspicious": {
 				"noConsole": "error",
@@ -95,14 +105,25 @@
 				"noImportCycles": "off",
 				"noUnnecessaryConditions": "error",
 				"useStaticResponseMethods": "off",
-				"noReturnAssign": "off"
+				"noReturnAssign": "off",
+				"noPlaywrightNetworkidle": "off",
+				"noPlaywrightWaitForTimeout": "off",
+				"noConditionalExpect": "off",
+				"useBaseline": "off",
+				"useArraySortCompare": "off",
+				"useExpect": "off",
+				"noMisplacedAssertion": "off",
+				"noLoopFunc": "off",
+				"noEvolvingTypes": "off",
+				"noDuplicateSelectors": "off"
 			},
 			"performance": {
 				"useTopLevelRegex": "off",
 				"noBarrelFile": "off",
 				"noNamespaceImport": "off",
 				"noAwaitInLoops": "error",
-				"noReExportAll": "off"
+				"noReExportAll": "off",
+				"useDomNodeTextContent": "off"
 			},
 			"security": {
 				"noSecrets": "off"
@@ -130,6 +151,16 @@
 	"html": {
 		"formatter": {
 			"indentScriptAndStyle": true
+		}
+	},
+	"markdown": {
+		"formatter": {
+			"enabled": false
+		}
+	},
+	"yaml": {
+		"formatter": {
+			"enabled": false
 		}
 	},
 	"overrides": [

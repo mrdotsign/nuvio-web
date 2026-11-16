@@ -23,7 +23,7 @@ test("discover: picking a catalog lands on it and repaints the grid", async ({
 	const errors = collectRuntimeErrors(page);
 	await page.goto("/discover");
 
-	const posters = page.getByRole("link", { name: /\((movie|series)\)/ });
+	const posters = page.getByRole("link", { name: /, (?:movie|series)\b/ });
 	await expect(posters.first()).toBeVisible({ timeout: 20_000 });
 	// The whole list, not just the first title : two catalogs of the same type
 	// often lead with the same film even though the rest differs.
@@ -48,7 +48,7 @@ test("discover: picking a genre lands on it, and All clears it", async ({
 	const errors = collectRuntimeErrors(page);
 	await page.goto("/discover");
 	await expect(
-		page.getByRole("link", { name: /\((movie|series)\)/ }).first(),
+		page.getByRole("link", { name: /, (?:movie|series)\b/ }).first(),
 	).toBeVisible({ timeout: 20_000 });
 
 	let genres = await openGroup(page, /^Genres/);

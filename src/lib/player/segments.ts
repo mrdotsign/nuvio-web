@@ -50,7 +50,6 @@ export type SegmentLookup =
 export function segmentLookup(contentId: string): SegmentLookup {
 	const trimmed = contentId.trim();
 	const tmdbPrefixed = /^tmdb:(\d+)/i.exec(trimmed);
-	// biome-ignore lint/suspicious/noUnnecessaryConditions: RegExp#exec returns null on no match (Biome 2.5.14 infers it as non-null; TypeScript does not)
 	if (tmdbPrefixed) {
 		return { tmdbId: Number(tmdbPrefixed[1]) };
 	}
@@ -157,7 +156,6 @@ export type AnimeLookup =
 export function animeLookup(contentId: string): AnimeLookup {
 	const trimmed = contentId.trim();
 	const namespaced = /^(mal|kitsu|anilist|tmdb):(\d+)$/i.exec(trimmed);
-	// biome-ignore lint/suspicious/noUnnecessaryConditions: RegExp#exec returns null on no match (Biome 2.5.14 infers it as non-null; TypeScript does not)
 	if (namespaced) {
 		const [, source, id] = namespaced;
 		switch (source.toLowerCase()) {

@@ -101,7 +101,11 @@ test("admin: a sign-in is counted, and no email reaches the dashboard", async ({
 	await expect(page).not.toHaveURL(/\/auth\/sign-in/, { timeout: 30_000 });
 
 	await page.goto("/admin");
-	await expect(page.getByText("Accounts", { exact: true })).toBeVisible();
+	await expect(
+		page
+			.getByRole("region", { name: "Key numbers" })
+			.getByText("Accounts", { exact: true }),
+	).toBeVisible();
 	const email = (process.env.NUVIO_TEST_EMAIL ?? "").toLowerCase();
 	await expect(page.getByText(email)).toHaveCount(0);
 });

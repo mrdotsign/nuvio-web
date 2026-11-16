@@ -481,9 +481,6 @@
                                                 size="sm"
                                                 disabled={saving}
                                                 aria-pressed={addon.enabled}
-                                                aria-label={addon.enabled
-                                                    ? m.settings_addons_disable({ name: addon.name })
-                                                    : m.settings_addons_enable({ name: addon.name })}
                                                 class="w-20"
                                                 onclick={() =>
                                                     setEnabled(
@@ -500,6 +497,9 @@
                                                         data-icon="inline-start"
                                                     /> {m.settings_addons_off()}
                                                 {/if}
+                                                <span class="sr-only"
+                                                    >{addon.name}</span
+                                                >
                                             </Button>
                                             <Button
                                                 variant="ghost"

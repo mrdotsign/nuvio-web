@@ -39,7 +39,6 @@ export async function serveFixtures(context: BrowserContext): Promise<void> {
 			};
 
 			const [, first = "", last = ""] =
-				// biome-ignore lint/suspicious/noUnnecessaryConditions: RegExp#exec returns null on no match (Biome 2.5.14 infers it as non-null; TypeScript does not)
 				/^bytes=(\d*)-(\d*)$/.exec(route.request().headers().range ?? "") ?? [];
 			if (first === "" && last === "") {
 				await route.fulfill({ status: 200, headers, body });

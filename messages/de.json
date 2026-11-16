@@ -869,7 +869,6 @@
 	"settings_addons_configure_title": "Konfigurationsseite dieses Addons öffnen",
 	"settings_addons_description": "Kataloge, Metadaten, Streams und Untertitel für dieses Profil.",
 	"settings_addons_dialog_description": "Füge die Manifest-URL eines Stremio-Addons ein.",
-	"settings_addons_disable": "{name} deaktivieren",
 	"settings_addons_disabled": "Deaktiviert",
 	"settings_addons_shared": "Das sind die Addons von {name}: Dieses Profil nutzt die Addons des Hauptprofils. Ändere sie in {name} oder beende das Teilen unter Profile verwalten.",
 	"settings_addons_shared_readonly": "Dieses Profil nutzt die Addons des Hauptprofils: Ändere sie im Hauptprofil.",
@@ -877,7 +876,6 @@
 	"settings_addons_drag": "Zum Neuordnen ziehen",
 	"settings_addons_empty_description": "Starte mit einem Metadaten-Anbieter: Kataloge, Poster und Details. Einen Stream-Anbieter fügst du selbst hinzu, sobald alles eingerichtet ist.",
 	"settings_addons_empty_title": "Noch keine Addons",
-	"settings_addons_enable": "{name} aktivieren",
 	"settings_addons_errors": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],

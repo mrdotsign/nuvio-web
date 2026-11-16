@@ -869,7 +869,6 @@
 	"settings_addons_configure_title": "Open this addon's configuration page",
 	"settings_addons_description": "Catalogs, metadata, streams and subtitles for this profile.",
 	"settings_addons_dialog_description": "Paste a Stremio addon manifest URL.",
-	"settings_addons_disable": "Disable {name}",
 	"settings_addons_disabled": "Disabled",
 	"settings_addons_shared": "These are {name}'s addons: this profile uses the main profile's addons. Change them from {name}, or stop sharing them in Manage profiles.",
 	"settings_addons_shared_readonly": "This profile uses the main profile's addons: change them from the main profile.",
@@ -877,7 +876,6 @@
 	"settings_addons_drag": "Drag to reorder",
 	"settings_addons_empty_description": "Start with a metadata provider : catalogs, posters and details. Add a stream provider yourself once you're set up.",
 	"settings_addons_empty_title": "No addons yet",
-	"settings_addons_enable": "Enable {name}",
 	"settings_addons_errors": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],

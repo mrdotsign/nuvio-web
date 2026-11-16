@@ -242,8 +242,11 @@ function normalizeMeta(raw: Meta): Meta {
 			(video) => video.id,
 		),
 		trailerStreams: uniqueBy(
-			asArray<{ title?: string; ytId: string }>(raw.trailerStreams).filter(
-				(trailer) => typeof trailer?.ytId === "string" && trailer.ytId !== "",
+			asArray<{ title?: string; ytId?: unknown } | null>(
+				raw.trailerStreams,
+			).filter(
+				(trailer): trailer is { title?: string; ytId: string } =>
+					typeof trailer?.ytId === "string" && trailer.ytId !== "",
 			),
 			(trailer) => trailer.ytId,
 		),

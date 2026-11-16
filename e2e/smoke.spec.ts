@@ -264,9 +264,11 @@ test("series poster + detail page offer a 'mark all watched' action", async ({
 	// the movie toggle above), so this only checks the affordance renders.
 	await page.goto("/search?q=breaking%20bad");
 	// Several movie results also contain "Breaking Bad" as a substring : match
-	// the series card specifically via its aria-label's `(series)` suffix.
+	// the series card specifically via the type its aria-label carries.
 	const poster = page
-		.getByRole("link", { name: /^Breaking Bad \(series\)/ })
+		.getByRole("link", {
+			name: /(?:^|, )Breaking Bad, (?:[^,]+, )?series\b/,
+		})
 		.first();
 	await expect(poster).toBeVisible({ timeout: 8000 });
 

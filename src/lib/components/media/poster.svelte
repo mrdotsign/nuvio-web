@@ -99,16 +99,16 @@
 			),
 	);
 
-	// The link's visible content (poster, title, badges) is all decorative once
-	// the link itself is labelled : fold the useful bits into one clean name.
+	// The visible text comes first, in the order it renders (WCAG 2.5.3, label in name).
 	const linkLabel = $derived(
 		[
-			`${item.name} (${item.type})`,
-			item.releaseInfo,
 			rating ? m.media_poster_rated({ rating }) : null,
+			newEpisode ? m.media_poster_new_episode() : null,
+			item.name,
+			item.releaseInfo,
+			item.type,
 			watched ? m.media_poster_watched() : null,
 			inLibrary ? m.media_poster_in_library() : null,
-			newEpisode ? m.media_poster_new_episode() : null,
 		]
 			.filter(Boolean)
 			.join(", "),
@@ -271,11 +271,6 @@
             {:else}
               <FilmIcon class="size-7 text-muted-foreground/50" />
             {/if}
-            <span
-              class="line-clamp-3 text-sm font-medium text-muted-foreground"
-            >
-              {item.name}
-            </span>
           </div>
         {/if}
 
