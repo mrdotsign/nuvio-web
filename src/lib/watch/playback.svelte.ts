@@ -34,6 +34,8 @@ export interface SelectedStream {
 	bingeGroup?: string | null;
 	/** The addon's request headers for the stream; absent on links saved before them. */
 	requestHeaders?: Record<string, string>;
+	/** The link sends the torrent to debrid and plays once it's there; absent on links saved before it. */
+	debridDownload?: boolean;
 }
 
 /** `stream`, labelled `label`, as the player takes it for `videoId`. */
@@ -55,6 +57,7 @@ export function selectedStream(
 		videoCodec: riskyVideoCodec(stream),
 		bingeGroup: stream.bingeGroup,
 		requestHeaders: stream.requestHeaders,
+		debridDownload: stream.debridDownload,
 	};
 }
 

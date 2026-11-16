@@ -299,13 +299,14 @@ function handleEngine(message: {
 	}
 }
 
-// What the system may open for a link: the web, mail, and the video players
-// the app hands streams to. Anything else (file:, custom app schemes a page
-// could aim at) stays shut.
+// What the system may open for a link: the web, mail, the torrent app P2P
+// sources go to, and the video players the app hands streams to. Anything else
+// (file:, custom app schemes a page could aim at) stays shut.
 const OUTSIDE_SCHEMES = new Set([
 	"http:",
 	"https:",
 	"mailto:",
+	"magnet:",
 	"vlc:",
 	"vlc-x-callback:",
 	"infuse:",

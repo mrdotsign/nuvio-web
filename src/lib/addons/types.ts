@@ -130,6 +130,8 @@ export interface Stream {
 		filename?: string;
 		videoHash?: string;
 		videoSize?: number;
+		/** Not on the addon's debrid service yet: see `debridLinkStatus`. */
+		debridDownload?: boolean;
 		proxyHeaders?: {
 			request?: Record<string, string>;
 			response?: Record<string, string>;

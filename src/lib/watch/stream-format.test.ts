@@ -204,6 +204,22 @@ describe("pickPreferredStream", () => {
 		expect(pickPreferredStream(mixed, "1080p")?.index).toBe(7);
 	});
 
+	it("prefers a source that plays now over one still to download on debrid", () => {
+		const mixed = [
+			stream({ index: 8, title: "Movie 1080p", debridDownload: true }),
+			stream({ index: 9, title: "Movie 720p" }),
+		];
+		expect(pickPreferredStream(mixed, "1080p")?.index).toBe(9);
+		expect(pickPreferredStream(mixed, "auto")?.index).toBe(9);
+	});
+
+	it("picks a debrid download when nothing else plays", () => {
+		const only = [
+			stream({ index: 10, title: "Movie 1080p", debridDownload: true }),
+		];
+		expect(pickPreferredStream(only, "1080p")?.index).toBe(10);
+	});
+
 	it("prefers browser-friendly audio at the same quality", () => {
 		const opts = [
 			stream({ index: 0, title: "Movie 1080p BluRay TrueHD Atmos" }),

@@ -17,6 +17,8 @@ export interface ResolvedStream {
 	bingeGroup: string | null;
 	/** `behaviorHints.proxyHeaders.request`, checked : what the host wants sent with it. */
 	requestHeaders?: Record<string, string>;
+	/** `behaviorHints.debridDownload` : the url sends the torrent to debrid and plays once it's there. */
+	debridDownload?: boolean;
 }
 
 export type StreamKind = "direct" | "p2p";
@@ -392,10 +394,13 @@ export function pickPreferredStream(
 	streams: ResolvedStream[],
 	preferred: string,
 ): ResolvedStream | null {
-	const playable = streams.filter(isPlayable);
-	if (playable.length === 0) {
+	const webReady = streams.filter(isPlayable);
+	if (webReady.length === 0) {
 		return streams[0] ?? null;
 	}
+	// One still to download on debrid only when nothing plays right away.
+	const ready = webReady.filter((stream) => !stream.debridDownload);
+	const playable = ready.length > 0 ? ready : webReady;
 
 	const target = QUALITY_RANK[preferred];
 

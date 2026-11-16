@@ -31,6 +31,7 @@
 	import { theme } from "#lib/settings/theme.svelte.js";
 	import type { UiSettings } from "#lib/settings/ui-settings.js";
 	import { sync } from "#lib/sync/store.svelte.js";
+	import { createDebridWait } from "#lib/watch/debrid-wait.svelte.js";
 	import { createPickedLanguages } from "#lib/watch/picked-languages.svelte.js";
 	import {
 		audioRiskyHere,
@@ -267,10 +268,15 @@
 		browser &&
 			prefersExternal(theme.current.externalPlayer, navigator.userAgent),
 	);
+	const debrid = createDebridWait(() =>
+		offlineSrc || !active?.debridDownload ? null : active,
+	);
+	// Held back while the source downloads on debrid.
+	const streamUrl = $derived(debrid.waiting ? null : (active?.url ?? null));
 	const playableSrc = $derived(
 		offlineSrc ??
 			(active && !active.notWebReady && !codecBlocked && !preferExternal
-				? (active.url ?? null)
+				? streamUrl
 				: null),
 	);
 	// The stream fan-out rejected (addon host down, CORS, network) : a distinct
@@ -595,7 +601,7 @@
 	}
 
 	const mpv = createMpvFallback({
-		url: () => (offlineSrc ? mpvDownloadUrl(download) : (active?.url ?? null)),
+		url: () => (offlineSrc ? mpvDownloadUrl(download) : streamUrl),
 		request: () => ({
 			title: [context.heading, subheading].filter(Boolean).join(" · "),
 			headers: offlineSrc ? undefined : active?.requestHeaders,
@@ -831,6 +837,20 @@
         </div>
       </div>
     {/if}
+  {:else if debrid.waiting}
+    <PlaybackLoading
+      backdrop={context.background ?? context.poster}
+      logo={context.logo}
+      title={context.heading}
+      label={debrid.downloading
+        ? m.watch_debrid_downloading()
+        : m.watch_debrid_sending()}
+    >
+      <p class="max-w-sm text-sm text-white/70">{m.watch_debrid_body()}</p>
+      <Button variant="secondary" onclick={openSources}
+        >{m.watch_choose_source()}</Button
+      >
+    </PlaybackLoading>
   {:else if resolving}
     <PlaybackLoading
       backdrop={context.background ?? context.poster}

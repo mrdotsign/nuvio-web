@@ -1,7 +1,10 @@
 import * as v from "valibot";
 import { getAddonClient, titleMeta } from "#lib/addons/server.js";
+import { safeRequestHeaders } from "#lib/core/request-headers.js";
 import { requireProfile } from "#lib/server/guards.js";
+import { pinnedFetch } from "#lib/server/safe-fetch.js";
 import { query } from "$app/server";
+import { debridLinkStatus } from "./debrid-link.ts";
 import { pullPlaybackMeta, pullSubtitles, shapeStream } from "./watch-data.ts";
 
 /**
@@ -42,6 +45,21 @@ export const resolveStreams = query(
 				reason: entry.reason,
 			})),
 		};
+	},
+);
+
+/**
+ * Where a stream that is still to download on the addon's debrid service stands.
+ * The player asks again until it is `ready`, then plays the same url.
+ */
+export const debridStatus = query(
+	v.object({
+		url: v.pipe(v.string(), v.url()),
+		headers: v.optional(v.record(v.string(), v.string())),
+	}),
+	({ url, headers }) => {
+		requireProfile();
+		return debridLinkStatus(url, pinnedFetch, safeRequestHeaders(headers));
 	},
 );
 

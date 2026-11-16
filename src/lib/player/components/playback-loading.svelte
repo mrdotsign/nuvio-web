@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from "svelte";
 	import { Spinner } from "#lib/components/ui/spinner/index.js";
 	import { cn } from "#lib/utils.js";
 	import LoadingMark from "./loading-mark.svelte";
@@ -10,6 +11,7 @@
 		label = null,
 		certification = null,
 		genres = [],
+		children,
 	}: {
 		backdrop?: string | null;
 		logo?: string | null;
@@ -17,6 +19,8 @@
 		label?: string | null;
 		certification?: string | null;
 		genres?: string[];
+		/** Under the label: what the wait is about and a way out of it. */
+		children?: Snippet;
 	} = $props();
 
 	let logoBroken = $state(false);
@@ -66,6 +70,7 @@
         {label}
       </p>
     {/if}
+    {@render children?.()}
   </div>
 
   {#if certification || genres.length > 0}

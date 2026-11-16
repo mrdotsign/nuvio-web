@@ -303,6 +303,7 @@ export function shapeStream(
 		requestHeaders: safeRequestHeaders(
 			stream.behaviorHints?.proxyHeaders?.request,
 		),
+		debridDownload: stream.behaviorHints?.debridDownload === true,
 	};
 }
 
