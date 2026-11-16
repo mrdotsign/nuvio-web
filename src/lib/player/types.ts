@@ -23,6 +23,17 @@ export interface SubtitleAppearance {
 	subtitleOutline?: boolean;
 }
 
+/** What the viewer changed in the player. */
+export interface PlaybackSettingsPatch {
+	boost?: number;
+	audioTrack?: number;
+	/** The picked audio track's language as the file spells it, or "". */
+	audioLanguage?: string;
+	/** The picked caption's language, or null for none. */
+	subtitleLanguage?: string | null;
+	subtitleOffset?: number;
+}
+
 export interface VideoPlayerProps {
 	src: string;
 	/** Backdrop image : loading treatment, `<video poster>`, info-overlay bed. */
@@ -57,11 +68,7 @@ export interface VideoPlayerProps {
 	initialBoost?: number;
 	/** The viewer changed the boost or the audio track. */
 	initialSubtitleOffset?: number;
-	onPlaybackSettings?: (patch: {
-		boost?: number;
-		audioTrack?: number;
-		subtitleOffset?: number;
-	}) => void;
+	onPlaybackSettings?: (patch: PlaybackSettingsPatch) => void;
 	/** The stream label hints at an audio codec the browser can't decode. */
 	audioRisky?: boolean;
 	/** The stream label hints at a video codec the browser can't decode. */

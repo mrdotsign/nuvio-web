@@ -15,7 +15,6 @@
 	import { downloads, playbackUrl } from "#lib/downloads/manager.svelte.js";
 	import { playbackSubtitles } from "#lib/downloads/subtitles.js";
 	import { m } from "#lib/i18n/index.js";
-	import { audioLanguageTargets } from "#lib/player/audio-language.js";
 	import { browserCanPlayCodec } from "#lib/player/codec-support.js";
 	import PlayerEndPanel from "#lib/player/components/end-panel.svelte";
 	import PlayerEpisodesPanel from "#lib/player/components/episodes-panel.svelte";
@@ -32,6 +31,7 @@
 	import { theme } from "#lib/settings/theme.svelte.js";
 	import type { UiSettings } from "#lib/settings/ui-settings.js";
 	import { sync } from "#lib/sync/store.svelte.js";
+	import { createPickedLanguages } from "#lib/watch/picked-languages.svelte.js";
 	import {
 		audioRiskyHere,
 		lastPlayed,
@@ -345,21 +345,13 @@
 		playbackSettings = restoredSettings();
 	});
 
-	// The preferred audio language : this profile's web setting, else what the
-	// Nuvio mobile app has.
-	const audioLanguages = $derived(
-		theme.current.audioLanguage
-			? audioLanguageTargets(
-					theme.current.audioLanguage,
-					null,
-					browser ? navigator.languages : [],
-				)
-			: audioLanguageTargets(
-					data.appAudio.preferred,
-					data.appAudio.secondary,
-					browser ? navigator.languages : [],
-				),
-	);
+	// The languages to start on : the viewer's pick, carried across episodes,
+	// then the profile's.
+	const picked = createPickedLanguages({
+		settings: () => theme.current,
+		appAudio: () => data.appAudio,
+		deviceLanguages: () => (browser ? navigator.languages : []),
+	});
 
 	// "S1E2 · Name" from the meta, never the stream's release name (that lives
 	// in the Sources drawer). Addons that don't name episodes send "Episode 2",
@@ -607,10 +599,7 @@
 		request: () => ({
 			title: [context.heading, subheading].filter(Boolean).join(" · "),
 			headers: offlineSrc ? undefined : active?.requestHeaders,
-			subtitles: mpvSubtitles(
-				subtitles.current,
-				theme.current.subtitleLanguage,
-			),
+			subtitles: mpvSubtitles(subtitles.current, picked.subtitles),
 		}),
 		blocked: () =>
 			Boolean(
@@ -717,8 +706,8 @@
       onBack={goBack}
       onSources={openSources}
       subtitles={subtitles.current}
-      preferredLanguage={theme.current.subtitleLanguage}
-      {audioLanguages}
+      preferredLanguage={picked.subtitles}
+      audioLanguages={picked.audio}
       subtitleSize={theme.current.subtitleSize}
       subtitleColor={theme.current.subtitleColor}
       subtitleBackground={theme.current.subtitleBackground}
@@ -730,6 +719,7 @@
       onOutro={() => reachedEnd(false)}
       onEpisodes={hasEpisodes ? () => (episodesOpen = true) : undefined}
       onNext={nextVideoId ? goToNext : undefined}
+      onPlaybackSettings={picked.pick}
     />
   {:else if mpv.pending}
     <PlaybackLoading
@@ -777,12 +767,13 @@
         subtitleColor={theme.current.subtitleColor}
         subtitleBackground={theme.current.subtitleBackground}
         subtitleOutline={theme.current.subtitleOutline}
-        preferredLanguage={theme.current.subtitleLanguage}
-        {audioLanguages}
+        preferredLanguage={picked.subtitles}
+        audioLanguages={picked.audio}
         initialAudioTrack={playbackSettings.audio}
         initialBoost={playbackSettings.boost}
         initialSubtitleOffset={playbackSettings.subtitleOffset}
         onPlaybackSettings={(patch) => {
+          picked.pick(patch);
           playbackSettings = {
             boost: patch.boost ?? playbackSettings.boost,
             audio: patch.audioTrack ?? playbackSettings.audio,

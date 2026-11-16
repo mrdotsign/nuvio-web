@@ -293,9 +293,27 @@
 		},
 		selectAudioTrack(id: number) {
 			media.selectAudioTrack(id);
-			onPlaybackSettings?.({ audioTrack: id });
+			onPlaybackSettings?.({
+				audioTrack: id,
+				audioLanguage:
+					media.audioTracks.find((track) => track.id === id)?.language ?? "",
+			});
 		},
 	};
+
+	// A caption the viewer picked (not the auto-pick) is reported upward.
+	function reportCaption(key: string | null) {
+		onPlaybackSettings?.({
+			subtitleLanguage:
+				key === null
+					? null
+					: (captions.options.find((entry) => entry.key === key)?.lang ?? ""),
+		});
+	}
+	function pickCaption(key: string | null) {
+		captions.choose(key);
+		reportCaption(key);
+	}
 
 	const bufferedEnd = $derived(transport.buffered.at(-1)?.end ?? 0);
 	const progressRatio = $derived(
@@ -394,7 +412,12 @@
 			adjustVolume: player.adjustVolume,
 			toggleFullscreen: () => void player.toggleFullscreen(),
 			toggleMute: () => (transport.muted = !transport.muted),
-			cycleCaption: captions.cycleCaption,
+			cycleCaption: () => {
+				const key = captions.cycleCaption();
+				if (key !== undefined) {
+					reportCaption(key);
+				}
+			},
 			nudgeSubtitles: (delta) => {
 				captions.nudgeSubtitleOffset(delta);
 				toast(
@@ -548,7 +571,7 @@
       {subtitleOutline}
       subtitleOffset={captions.subtitleOffset}
       onOpenChange={panels.setSubtitlesOpen}
-      onSelect={captions.setCaption}
+      onSelect={pickCaption}
       onAppearance={(patch) => onSubtitleAppearance?.(patch)}
       onNudgeOffset={captions.nudgeSubtitleOffset}
     />

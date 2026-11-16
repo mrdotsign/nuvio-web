@@ -56,6 +56,8 @@ export function createSubtitleController(deps: {
 			return selection.state.subtitleOffset;
 		},
 		setCaption: selection.setCaption,
+		/** The viewer's pick: no auto-pick replaces it on this source. */
+		choose: shortcuts.choose,
 		nudgeSubtitleOffset: selection.nudgeSubtitleOffset,
 		cycleCaption: shortcuts.cycleCaption,
 		trySelectPreferred: shortcuts.trySelectPreferred,

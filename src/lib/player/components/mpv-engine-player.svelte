@@ -25,7 +25,11 @@
 	import { createPlaybackMilestones } from "#lib/player/state/milestones.svelte.js";
 	import type { PlayerMenu } from "#lib/player/state/panel-toggles.svelte.js";
 	import type { PlayerTransportState } from "#lib/player/state/transport-state.svelte.js";
-	import type { SubtitleAppearance, SubtitleTrack } from "#lib/player/types.js";
+	import type {
+		PlaybackSettingsPatch,
+		SubtitleAppearance,
+		SubtitleTrack,
+	} from "#lib/player/types.js";
 	import { theme } from "#lib/settings/theme.svelte.js";
 	import type { SubtitleSize } from "#lib/settings/ui-settings.js";
 	import ControlRow from "./control-row.svelte";
@@ -55,6 +59,7 @@
 		onOutro,
 		onNext,
 		onEpisodes,
+		onPlaybackSettings,
 	}: {
 		engine: DesktopEngine;
 		title: string;
@@ -77,6 +82,8 @@
 		onOutro?: () => void;
 		onNext?: () => void;
 		onEpisodes?: () => void;
+		/** The viewer picked an audio track or a caption: their languages. */
+		onPlaybackSettings?: (patch: PlaybackSettingsPatch) => void;
 	} = $props();
 
 	const SEEK_STEP = 10;
@@ -309,7 +316,15 @@
         openMenu = null;
       }
     }}
-    onSelect={selectCaption}
+    onSelect={(key) => {
+      selectCaption(key);
+      onPlaybackSettings?.({
+        subtitleLanguage:
+          key === null
+            ? null
+            : (captionOptions.find((entry) => entry.key === key)?.lang ?? ""),
+      });
+    }}
     onAppearance={(patch) => onSubtitleAppearance?.(patch)}
     onNudgeOffset={(delta) => {
       subtitleOffset = Math.round((subtitleOffset + delta) * 10) / 10;
@@ -407,7 +422,14 @@
             audioTracks,
             activeAudioTrack:
               audioTracks.find((track) => track.selected)?.id ?? -1,
-            selectAudioTrack: (id) => command({ op: "audio", id }),
+            selectAudioTrack: (id) => {
+              command({ op: "audio", id });
+              onPlaybackSettings?.({
+                audioLanguage:
+                  tracks.find((track) => track.type === "audio" && track.id === id)
+                    ?.lang ?? "",
+              });
+            },
           }}
           {onNext}
           {onEpisodes}
