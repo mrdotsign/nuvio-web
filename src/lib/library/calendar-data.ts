@@ -3,7 +3,7 @@ import { pooledMap } from "#lib/core/pool.js";
 import type { HistoryRecord, LibraryRecord } from "#lib/sync/types.js";
 import type { ProfileData } from "#lib/userdata/types.js";
 import type { UpcomingEpisode } from "#lib/watch/episodes.js";
-import { parseVideoId, titleProgressFor } from "#lib/watch/playback-context.js";
+import { titleProgressFor } from "#lib/watch/playback-context.js";
 import { type MetaLookup, pullNextToAir } from "#lib/watch/watch-data.js";
 import {
 	type CalendarEntry,
@@ -61,25 +61,14 @@ function watchedVideoIds(
 	progress: Awaited<ReturnType<ProfileData["progress"]>>,
 	history: readonly HistoryRecord[],
 ): Set<string> {
-	const videos = meta.videos ?? [];
-	const watched = new Set(
-		Object.keys(titleProgressFor(progress, "series", id, videos)),
+	return new Set(
+		Object.keys(
+			titleProgressFor(progress, "series", id, {
+				videos: meta.videos,
+				history,
+			}),
+		),
 	);
-	const contentIds = new Set([
-		id,
-		...videos.map((video) => parseVideoId("series", video.id).contentId),
-	]);
-	for (const entry of history) {
-		if (!contentIds.has(entry.contentId)) {
-			continue;
-		}
-		for (const video of videos) {
-			if (video.season === entry.season && video.episode === entry.episode) {
-				watched.add(video.id);
-			}
-		}
-	}
-	return watched;
 }
 
 // Library series ids with an episode out in the last week the profile has not watched.

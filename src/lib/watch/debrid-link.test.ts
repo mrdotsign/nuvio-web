@@ -19,15 +19,25 @@ describe("debridLinkStatus", () => {
 		expect(await debridLinkStatus(LINK, fetchImpl)).toBe("ready");
 	});
 
-	it("is downloading while the addon answers 503 downloading", async () => {
+	it("is downloading while the addon answers 202 downloading", async () => {
 		const fetchImpl = answering(
-			Response.json({ status: "downloading" }, { status: 503 }),
+			Response.json({ status: "downloading" }, { status: 202 }),
 		);
 		expect(await debridLinkStatus(LINK, fetchImpl)).toBe("downloading");
 	});
 
-	it("fails on any other 503", async () => {
-		const fetchImpl = answering(new Response("busy", { status: 503 }));
+	it("fails on any other 202", async () => {
+		const fetchImpl = answering(new Response("busy", { status: 202 }));
+		expect(await debridLinkStatus(LINK, fetchImpl)).toBe("failed");
+	});
+
+	it("fails on a proxy's 503 error page", async () => {
+		const fetchImpl = answering(
+			new Response("<!doctype html>", {
+				status: 503,
+				headers: { "content-type": "text/html" },
+			}),
+		);
 		expect(await debridLinkStatus(LINK, fetchImpl)).toBe("failed");
 	});
 

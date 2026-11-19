@@ -1,4 +1,4 @@
-import { pooledMap } from "#lib/core/pool.js";
+import { limiter, pooledMap } from "#lib/core/pool.js";
 import {
 	EMPTY_HOME_LAYOUT,
 	type HomeLayout,
@@ -14,9 +14,9 @@ import { parseAddonUrl } from "./manifest.ts";
 import type { AddonRegistry } from "./registry.ts";
 import type { Meta, MetaPreview } from "./types.ts";
 
-// Home shows up to 8 catalogs (16 once the user arranged them); fetching them
-// all at once is a burst at whichever addons serve them, so a few at a time.
-const CATALOG_CONCURRENCY = 4;
+// Home shows up to 8 catalogs (16 once the user arranged them): the default
+// feed goes out in one wave, an arranged one in two rather than as one burst.
+const CATALOG_CONCURRENCY = 8;
 
 /**
  * Just the bits of `AddonClient` these need, so the orchestration below can
@@ -72,20 +72,23 @@ function catalogSupports(
 	).includes(key);
 }
 
+/** A home row before its titles land: `metas` settles on its own, `[]` on failure. */
+export type HomeRowSlot = Omit<HomeRow, "metas"> & {
+	metas: Promise<MetaPreview[]>;
+};
+
 /**
- * The home feed's catalog rows. Rows that error or come back empty are
- * dropped. Pooled so a many-catalog profile doesn't burst every addon at once.
- */
-/**
- * The home screen's catalog rows. `layout` is the profile's arrangement from
+ * The home screen's catalog rows, each fetching its catalog behind a shared
+ * concurrency gate, so a row paints as soon as its own addon answers instead
+ * of waiting on the slowest one. `layout` is the profile's arrangement from
  * Settings → Home (order, hidden catalogs); without one, the first eight
- * catalogs in addon order, as before there was an editor.
+ * catalogs in addon order.
  */
-export async function homeCatalogRows(
+export function homeCatalogSlots(
 	client: CatalogSource,
 	registry: AddonRegistry,
 	layout: HomeLayout = EMPTY_HOME_LAYOUT,
-): Promise<HomeRow[]> {
+): HomeRowSlot[] {
 	const browsable = registry
 		.catalogs()
 		.filter(({ catalog }) => !catalog.extraRequired?.length);
@@ -99,28 +102,37 @@ export async function homeCatalogRows(
 		layout,
 	).map((entry) => entry.ref);
 
-	const rows = await pooledMap(catalogs, CATALOG_CONCURRENCY, async (ref) => {
-		try {
-			const result = await client.getCatalog(
+	const gate = limiter(CATALOG_CONCURRENCY);
+	return catalogs.map((ref) => ({
+		addonId: ref.addonId,
+		addonName: ref.addon.manifest.name,
+		type: ref.catalog.type,
+		id: ref.catalog.id,
+		title: ref.catalog.name ?? ref.addon.manifest.name,
+		metas: gate(() =>
+			client.getCatalog(
 				{ type: ref.catalog.type, id: ref.catalog.id },
 				ref.addonId,
-			);
-			return {
-				addonId: ref.addonId,
-				addonName: ref.addon.manifest.name,
-				type: ref.catalog.type,
-				id: ref.catalog.id,
-				title: ref.catalog.name ?? ref.addon.manifest.name,
-				metas: (result?.metas ?? []).slice(0, 20),
-			};
-		} catch {
-			return null;
-		}
-	});
+			),
+		)
+			.then((result) => (result?.metas ?? []).slice(0, 20))
+			.catch(() => []),
+	}));
+}
 
-	return rows.filter(
-		(row): row is HomeRow => row != null && row.metas.length > 0,
+/** Every home row with its titles, empty ones dropped : for a caller that wants them all at once. */
+export async function homeCatalogRows(
+	client: CatalogSource,
+	registry: AddonRegistry,
+	layout: HomeLayout = EMPTY_HOME_LAYOUT,
+): Promise<HomeRow[]> {
+	const rows = await Promise.all(
+		homeCatalogSlots(client, registry, layout).map(async (slot) => ({
+			...slot,
+			metas: await slot.metas,
+		})),
 	);
+	return rows.filter((row) => row.metas.length > 0);
 }
 
 /** Search every catalog that advertises `search`, de-duped by `type:id`. */

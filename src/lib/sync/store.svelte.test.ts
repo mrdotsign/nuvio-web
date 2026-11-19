@@ -362,6 +362,29 @@ describe("optimistic writes", () => {
 		]);
 		expect(sync.history.map((entry) => entry.id)).toEqual(["tt1::"]);
 	});
+
+	// A history entry alone counts as watched, so "mark unwatched" drops both.
+	it("markUnwatched deletes the history entry along with the progress row", async () => {
+		await sync.attach(1, USER_A);
+		sync.restoreHistory(watchedOne);
+		sync.markWatched({
+			contentId: "tt1",
+			contentType: "movie",
+			videoId: "tt1",
+			season: null,
+			episode: null,
+			durationMs: 0,
+		});
+		await sync.flushNow();
+
+		sync.markUnwatched({ contentId: "tt1", season: null, episode: null });
+		expect(sync.history).toEqual([]);
+		expect(sync.progress).toEqual([]);
+		await sync.flushNow();
+		const payload = remote.flushWrites.mock.calls.at(-1)?.[0];
+		expect(payload?.historyDeletes).toHaveLength(1);
+		expect(payload?.progressDeletes).toHaveLength(1);
+	});
 });
 
 describe("flush failures", () => {

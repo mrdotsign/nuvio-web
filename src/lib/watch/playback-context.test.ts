@@ -327,7 +327,7 @@ describe("titleProgressFor", () => {
 			],
 			"series",
 			"tt0903747",
-			videos,
+			{ videos },
 		);
 		expect(map["tmdb:1396:1:1"]).toEqual({ fraction: 1, completed: true });
 		expect(map["tmdb:1396:1:2"]).toEqual({ fraction: 0.4, completed: false });
@@ -346,7 +346,7 @@ describe("titleProgressFor", () => {
 			],
 			"series",
 			"tt0903747",
-			videos,
+			{ videos },
 		);
 		expect(map["tmdb:1396:1:1"].completed).toBe(true);
 	});
@@ -356,7 +356,7 @@ describe("titleProgressFor", () => {
 			[row({ contentId: "kitsu:1", videoId: "kitsu:1:2", position: 40_000 })],
 			"series",
 			"kitsu:1",
-			[video({ id: "kitsu:1:2", season: 1, episode: 2 })],
+			{ videos: [video({ id: "kitsu:1:2", season: 1, episode: 2 })] },
 		);
 		expect(map["kitsu:1:2"].fraction).toBe(0.4);
 	});
@@ -378,7 +378,7 @@ describe("titleProgressFor", () => {
 			],
 			"series",
 			"tt0903747",
-			videos,
+			{ videos },
 		);
 		expect(map["tmdb:1396:1:1"]).toBeUndefined();
 		expect(map["tmdb:1396:1:2"].fraction).toBe(0.5);
@@ -389,7 +389,6 @@ describe("titleProgressFor", () => {
 			[row({ contentId: "tt9", videoId: "tt9", duration: 59_000 })],
 			"movie",
 			"tt9",
-			undefined,
 		);
 		expect(map.tt9.completed).toBe(false);
 	});
@@ -399,9 +398,74 @@ describe("titleProgressFor", () => {
 			[row({ contentId: "tt9", videoId: "tt9" })],
 			"movie",
 			"tt9",
-			undefined,
 		);
 		expect(map.tt9.completed).toBe(true);
+	});
+	describe("with history", () => {
+		const ttVideos = [
+			video({ id: "tt0903747:1:1", season: 1, episode: 1 }),
+			video({ id: "tt0903747:1:2", season: 1, episode: 2 }),
+			video({ id: "tt0903747:1:3", season: 1, episode: 3 }),
+		];
+		const watched = (
+			contentId: string,
+			season: number | null,
+			episode: number | null,
+		) => ({ contentId, season, episode });
+
+		// Stremio history imported through NuvioSync: watched entries, no progress.
+		it("marks an episode completed from history alone", () => {
+			const map = titleProgressFor([], "series", "tt0903747", {
+				videos: ttVideos,
+				history: [watched("tt0903747", 1, 1), watched("tt0903747", 1, 2)],
+			});
+			expect(map["tt0903747:1:1"]).toEqual({ fraction: 1, completed: true });
+			expect(map["tt0903747:1:3"]).toBeUndefined();
+			expect(resumeTarget(playOrder(ttVideos), map)?.label).toBe(
+				"Continue S1E3",
+			);
+		});
+
+		it("wins over a partial progress row on the same episode", () => {
+			const map = titleProgressFor(
+				[
+					row({
+						contentId: "tt0903747",
+						videoId: "tt0903747:1:1",
+						season: 1,
+						episode: 1,
+						position: 30_000,
+					}),
+				],
+				"series",
+				"tt0903747",
+				{ videos: ttVideos, history: [watched("tt0903747", 1, 1)] },
+			);
+			expect(map["tt0903747:1:1"].completed).toBe(true);
+		});
+
+		it("matches a namespaced episode id by season and episode", () => {
+			const map = titleProgressFor([], "series", "tt0903747", {
+				videos,
+				history: [watched("tmdb:1396", 1, 2)],
+			});
+			expect(map["tmdb:1396:1:2"].completed).toBe(true);
+		});
+
+		it("ignores another title, and a series entry with no episode", () => {
+			const map = titleProgressFor([], "series", "tt0903747", {
+				videos: ttVideos,
+				history: [watched("tt0411008", 1, 1), watched("tt0903747", null, null)],
+			});
+			expect(map).toEqual({});
+		});
+
+		it("marks a movie completed", () => {
+			const map = titleProgressFor([], "movie", "tt9", {
+				history: [watched("tt9", null, null)],
+			});
+			expect(map.tt9.completed).toBe(true);
+		});
 	});
 });
 
@@ -517,10 +581,12 @@ describe("resumeTarget", () => {
 			],
 			"series",
 			"tt1",
-			[
-				video({ id: "dup", season: 1, episode: 1 }),
-				video({ id: "e1", season: 1, episode: 1 }),
-			],
+			{
+				videos: [
+					video({ id: "dup", season: 1, episode: 1 }),
+					video({ id: "e1", season: 1, episode: 1 }),
+				],
+			},
 		);
 		expect(Object.keys(map).sort()).toEqual(["dup", "e1"]);
 	});

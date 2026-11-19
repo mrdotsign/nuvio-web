@@ -1,6 +1,10 @@
 import type { Database } from "bun:sqlite";
 import type { DatabaseService } from "#lib/services/database.service.js";
-import type { SyncChanges, SyncCursors } from "#lib/sync/types.js";
+import type {
+	HistoryRecord,
+	SyncChanges,
+	SyncCursors,
+} from "#lib/sync/types.js";
 import type { UserDataEvents } from "./events.ts";
 import { decide, foldChanges, type RemoteChange } from "./merge.ts";
 import {
@@ -8,6 +12,7 @@ import {
 	ENTITIES,
 	type Entity,
 	type EntityRecords,
+	type HistoryPage,
 	type StoredRow,
 	type UserDataChange,
 	type UserDataEvent,
@@ -15,7 +20,11 @@ import {
 } from "./types.ts";
 
 // One table for the three collections: they share the change sequence, the
-// tombstones and the outbox, and nothing queries inside a record.
+// tombstones and the outbox. Only history reads inside a record
+// (`json_extract`: `watchedAt` to sort a page, `contentId` to pick a title).
+const HISTORY_ROWS =
+	"FROM userdata_records WHERE user_id = ? AND profile_id = ? AND entity = 'history' AND deleted = 0";
+
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS userdata_records (
 	user_id     TEXT NOT NULL,
@@ -165,6 +174,53 @@ export class UserDataStore {
 			.all(userId, profileId, entity)
 			.map((row) => JSON.parse(row.record) as EntityRecords[E]);
 		return records.sort((a, b) => sortTime(b) - sortTime(a));
+	}
+
+	/** One page of history, newest first, with the page clamped to the pages
+	 *  the history fills (a stale `?page=` past the end shows the last one). */
+	historyPage(
+		userId: string,
+		profileId: number,
+		requestedPage: number,
+		pageSize: number,
+	): HistoryPage {
+		const db = this.#db();
+		const total =
+			db
+				.query<{ total: number }, [string, number]>(
+					`SELECT COUNT(*) AS total ${HISTORY_ROWS}`,
+				)
+				.get(userId, profileId)?.total ?? 0;
+		const pageCount = Math.max(1, Math.ceil(total / pageSize));
+		const page = Math.min(
+			Math.max(1, Math.floor(requestedPage) || 1),
+			pageCount,
+		);
+		const records = db
+			.query<{ record: string }, [string, number, number, number]>(
+				`SELECT record ${HISTORY_ROWS} ORDER BY json_extract(record, '$.watchedAt') DESC LIMIT ? OFFSET ?`,
+			)
+			.all(userId, profileId, pageSize, (page - 1) * pageSize)
+			.map((row) => JSON.parse(row.record) as HistoryRecord);
+		return { records, total, page, pageCount };
+	}
+
+	/** The history rows under any of `contentIds`: one title's, for its watched state. */
+	historyOf(
+		userId: string,
+		profileId: number,
+		contentIds: readonly string[],
+	): HistoryRecord[] {
+		if (contentIds.length === 0) {
+			return [];
+		}
+		const placeholders = contentIds.map(() => "?").join(", ");
+		return this.#db()
+			.query<{ record: string }, (string | number)[]>(
+				`SELECT record ${HISTORY_ROWS} AND json_extract(record, '$.contentId') IN (${placeholders})`,
+			)
+			.all(userId, profileId, ...contentIds)
+			.map((row) => JSON.parse(row.record) as HistoryRecord);
 	}
 
 	snapshot(userId: string, profileId: number): UserDataSnapshot {

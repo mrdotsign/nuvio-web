@@ -373,3 +373,61 @@ describe("deleteUser", () => {
 		expect(store.list("user-2", 1, "library")).toHaveLength(1);
 	});
 });
+
+describe("historyPage", () => {
+	function watched(id: string, watchedAt: number): RemoteChange {
+		return {
+			entity: "history",
+			key: `${id}::`,
+			record: {
+				id: `${id}::`,
+				contentId: id,
+				contentType: "movie",
+				title: id,
+				season: null,
+				episode: null,
+				watchedAt,
+			},
+			deleted: false,
+			at: watchedAt,
+			eventId: watchedAt,
+		};
+	}
+
+	it("pages newest first in SQL and clamps the page to the history", () => {
+		store.applyRemote(
+			U,
+			1,
+			[1, 5, 3, 4, 2].map((at) => watched(`tt${at}`, at)),
+		);
+		const second = store.historyPage(U, 1, 2, 2);
+		expect(second).toMatchObject({ total: 5, page: 2, pageCount: 3 });
+		expect(second.records.map((record) => record.contentId)).toEqual([
+			"tt3",
+			"tt2",
+		]);
+		expect(store.historyPage(U, 1, 99, 2)).toMatchObject({ page: 3 });
+		expect(store.historyPage(U, 1, Number.NaN, 2)).toMatchObject({ page: 1 });
+		expect(store.historyPage(U, 2, 1, 2)).toEqual({
+			records: [],
+			total: 0,
+			page: 1,
+			pageCount: 1,
+		});
+	});
+
+	it("reads only the history under the given content ids", () => {
+		store.applyRemote(
+			U,
+			1,
+			[1, 2, 3].map((at) => watched(`tt${at}`, at)),
+		);
+		expect(
+			store
+				.historyOf(U, 1, ["tt1", "tt3", "tt9"])
+				.map((record) => record.contentId)
+				.sort(),
+		).toEqual(["tt1", "tt3"]);
+		expect(store.historyOf(U, 1, [])).toEqual([]);
+	});
+});

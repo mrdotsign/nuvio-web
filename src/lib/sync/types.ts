@@ -47,6 +47,9 @@ export interface HistoryRecord {
 	watchedAt: number;
 }
 
+/** What identifies one title or episode across progress and history. */
+export type WatchKey = Pick<HistoryRecord, "contentId" | "season" | "episode">;
+
 export type SyncEntity = "library" | "watchProgress" | "watchHistory";
 
 /** Per-entity `event_id` high-water marks, persisted so pulls resume incrementally. */

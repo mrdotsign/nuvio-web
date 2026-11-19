@@ -473,3 +473,25 @@ test.describe("server render", () => {
 		).toHaveAttribute("aria-current", "page");
 	});
 });
+
+test("home: keeps the feed on the device for the next visit", async ({
+	page,
+}) => {
+	const errors = collectRuntimeErrors(page);
+	await page.goto("/");
+	await page.waitForLoadState("networkidle");
+	const cachedRows = () =>
+		page.evaluate(() => {
+			const key = Object.keys(localStorage).find((entry) =>
+				entry.startsWith("nuvio:home:"),
+			);
+			return key ? JSON.parse(localStorage.getItem(key) ?? "{}").rows : null;
+		});
+	await expect.poll(cachedRows, { timeout: 15_000 }).not.toBeNull();
+
+	// The next visit paints from that copy, then swaps in the fresh rows.
+	await page.reload();
+	await page.waitForLoadState("networkidle");
+	await page.waitForTimeout(500);
+	expect(errors, "runtime errors").toEqual([]);
+});

@@ -8,6 +8,8 @@ function data(over: Partial<ProfileData>): ProfileData {
 		library: async () => [],
 		progress: async () => [],
 		history: async () => [],
+		historyPage: async () => ({ records: [], total: 0, page: 1, pageCount: 1 }),
+		historyOf: async () => [],
 		...over,
 	};
 }

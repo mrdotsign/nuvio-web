@@ -55,9 +55,18 @@ export interface StoredRow<E extends Entity = Entity> {
 	at: number;
 }
 
+export interface HistoryPage {
+	records: HistoryRecord[];
+	total: number;
+	page: number;
+	pageCount: number;
+}
+
 /** A page load's read access to the profile's own data, newest first. */
 export interface ProfileData {
 	library: () => Promise<LibraryRecord[]>;
 	progress: () => Promise<ProgressRecord[]>;
 	history: () => Promise<HistoryRecord[]>;
+	historyPage: (page: number, pageSize: number) => Promise<HistoryPage>;
+	historyOf: (contentIds: readonly string[]) => Promise<HistoryRecord[]>;
 }

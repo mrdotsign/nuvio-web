@@ -20,6 +20,8 @@ function nuvioWith(rows: unknown[] | Promise<never>): ProfileData {
 	return {
 		library: none,
 		history: none,
+		historyPage: async () => ({ records: [], total: 0, page: 1, pageCount: 1 }),
+		historyOf: async () => [],
 		progress: () =>
 			rows instanceof Promise
 				? rows

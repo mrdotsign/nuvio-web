@@ -32,6 +32,7 @@ import type {
 	SyncChanges,
 	SyncChannelMessage,
 	SyncCursors,
+	WatchKey,
 } from "./types.ts";
 import {
 	applyTouched,
@@ -404,17 +405,9 @@ class SyncStore {
 		this.#scheduleFlush();
 	}
 
-	/** Drop a watch-progress row (e.g. "mark unwatched"). */
-	clearProgress(input: {
-		contentId: string;
-		season: number | null;
-		episode: number | null;
-	}): void {
-		const progressKey = progressKeyFor(
-			input.contentId,
-			input.season,
-			input.episode,
-		);
+	/** Drop a watch-progress row, history untouched (continue watching's "remove"). */
+	clearProgress({ contentId, season, episode }: WatchKey): void {
+		const progressKey = progressKeyFor(contentId, season, episode);
 		if (!this.#progress.has(progressKey)) {
 			return;
 		}
@@ -427,11 +420,16 @@ class SyncStore {
 		this.#scheduleFlush();
 	}
 
-	deleteHistory(input: {
-		contentId: string;
-		season: number | null;
-		episode: number | null;
-	}): void {
+	/** "Mark unwatched": a history entry counts as watched too, so drop both. */
+	markUnwatched(input: WatchKey): void {
+		this.clearProgress(input);
+		const { contentId, season, episode } = input;
+		if (this.#history.has(historyKey(contentId, season, episode))) {
+			this.deleteHistory(input);
+		}
+	}
+
+	deleteHistory(input: WatchKey): void {
 		const id = historyKey(input.contentId, input.season, input.episode);
 		const record = this.#history.get(id);
 		this.#enqueue({

@@ -140,17 +140,15 @@
 	// Local only: empty until the sync store has loaded, milliseconds in.
 	const episodeProgress = $derived(
 		hasEpisodes
-			? titleProgressFor(
-					sync.progress,
-					type,
-					context.contentId,
-					context.episodes.map((entry) => ({
+			? titleProgressFor(sync.progress, type, context.contentId, {
+					videos: context.episodes.map((entry) => ({
 						id: entry.videoId,
 						title: entry.title,
 						season: entry.season,
 						episode: entry.episode,
 					})),
-				)
+					history: sync.history,
+				})
 			: {},
 	);
 

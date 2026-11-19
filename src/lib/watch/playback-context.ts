@@ -106,6 +106,12 @@ export interface ProgressLike {
 	duration: number;
 }
 
+/** The fields of a watch-history entry matching needs. */
+export type HistoryLike = Pick<
+	ProgressLike,
+	"contentId" | "season" | "episode"
+>;
+
 /**
  * One title's progress, keyed by the id the page renders : the URL id for a
  * movie, the meta's video id for each episode.
@@ -116,13 +122,18 @@ export interface ProgressLike {
  * count, and an episode row matches a video by exact video id or, failing
  * that, by `(season, episode)` : each side normalised through `parseVideoId`
  * so `kitsu:46474:5` (S1E5) lines up with a meta video at season 1 episode 5.
- * When two rows land on one video, the furthest one wins.
+ * When two rows land on one video, the furthest one wins. A history entry
+ * marks its video completed whatever the progress says: history imported from
+ * elsewhere (Stremio, via NuvioSync) carries no progress row at all.
  */
 export function titleProgressFor(
 	rows: readonly ProgressLike[],
 	type: string,
 	id: string,
-	videos: readonly MetaVideo[] | undefined,
+	{
+		videos,
+		history = [],
+	}: { videos?: readonly MetaVideo[]; history?: readonly HistoryLike[] } = {},
 ): TitleProgress {
 	const out: TitleProgress = {};
 	for (const { row, targets } of matchRows(rows, type, id, videos)) {
@@ -133,7 +144,30 @@ export function titleProgressFor(
 			}
 		}
 	}
+	const index = titleIndex(type, id, videos);
+	for (const entry of history) {
+		for (const target of historyTargets(entry, type, id, index)) {
+			out[target] = { fraction: 1, completed: true };
+		}
+	}
 	return out;
+}
+
+/** The videos a history entry marks watched: the movie, or the episodes at its `SxEy`. */
+function historyTargets(
+	entry: HistoryLike,
+	type: string,
+	id: string,
+	index: VideoIndex,
+): string[] {
+	if (!index.contentIds.has(entry.contentId)) {
+		return [];
+	}
+	const slot = slotKey(entry.season, entry.episode);
+	if (type === "series") {
+		return (slot && index.bySlot.get(slot)) || [];
+	}
+	return slot ? [] : [id];
 }
 
 /**
@@ -170,6 +204,26 @@ export function resumeRowFor<T extends ProgressLike>(
 	}
 	return best;
 }
+/** Every content id a title's rows can sit under: the URL id and its videos'. */
+export function titleContentIds(
+	type: string,
+	id: string,
+	videos: readonly MetaVideo[] | undefined,
+): string[] {
+	return [...titleIndex(type, id, videos).contentIds];
+}
+
+/** The title's videos indexed, with the URL id among its content ids. */
+function titleIndex(
+	type: string,
+	id: string,
+	videos: readonly MetaVideo[] | undefined,
+) {
+	const index = indexVideos(type, type === "series" ? (videos ?? []) : []);
+	index.contentIds.add(id).add(parseVideoId(type, id).contentId);
+	return index;
+}
+
 /** Every usable row of this title, with the ids it counts for : the URL id for
  *  a movie, the matching meta videos for a series episode (possibly none). */
 function matchRows<T extends ProgressLike>(
@@ -179,8 +233,7 @@ function matchRows<T extends ProgressLike>(
 	videos: readonly MetaVideo[] | undefined,
 ): { row: T; targets: string[] }[] {
 	const series = type === "series";
-	const index = indexVideos(type, series ? (videos ?? []) : []);
-	index.contentIds.add(id).add(parseVideoId(type, id).contentId);
+	const index = titleIndex(type, id, videos);
 	return rows.flatMap((row) => {
 		const parsed = parseVideoId(type, row.videoId);
 		const ours =

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { partitionSettled, pooledMap, settleAll, settleSome } from "./pool.ts";
+import {
+	limiter,
+	partitionSettled,
+	pooledMap,
+	settleAll,
+	settleSome,
+} from "./pool.ts";
 
 describe("pooledMap", () => {
 	it("keeps input order regardless of completion order", async () => {
@@ -78,5 +84,43 @@ describe("settleSome", () => {
 		]);
 		expect(results).toEqual(["ok"]);
 		expect(errors).toHaveLength(1);
+	});
+});
+
+describe("limiter", () => {
+	it("caps tasks in flight and settles each on its own", async () => {
+		const gate = limiter(2);
+		let active = 0;
+		let peak = 0;
+		const order: number[] = [];
+		const task = (index: number, ms: number) =>
+			gate(async () => {
+				active += 1;
+				peak = Math.max(peak, active);
+				await new Promise((resolve) => setTimeout(resolve, ms));
+				active -= 1;
+				order.push(index);
+				return index;
+			});
+
+		const results = await Promise.all([
+			task(0, 30),
+			task(1, 5),
+			task(2, 5),
+			task(3, 5),
+		]);
+		expect(results).toEqual([0, 1, 2, 3]);
+		expect(peak).toBe(2);
+		expect(order[0]).toBe(1);
+	});
+
+	it("frees the slot when a task throws", async () => {
+		const gate = limiter(1);
+		await expect(
+			gate(async () => {
+				throw new Error("boom");
+			}),
+		).rejects.toThrow("boom");
+		expect(await gate(async () => "next")).toBe("next");
 	});
 });

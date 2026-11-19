@@ -4,6 +4,7 @@ import {
 	type CatalogSource,
 	catalogPage,
 	homeCatalogRows,
+	homeCatalogSlots,
 	searchAllCatalogs,
 	similarToTitle,
 	titleMeta,
@@ -171,11 +172,51 @@ describe("homeCatalogRows", () => {
 			}),
 		});
 
+		// An arranged layout shows up to 16 rows: more than one wave.
 		await homeCatalogRows(
 			client,
-			registryWith(Array.from({ length: 8 }, (_, i) => ref({ id: `c${i}` }))),
+			registryWith(Array.from({ length: 16 }, (_, i) => ref({ id: `c${i}` }))),
+			{ rows: [], hidden_catalogs: ["none|movie|none"] },
 		);
-		expect(peak).toBeLessThanOrEqual(4);
+		expect(client.getCatalog).toHaveBeenCalledTimes(16);
+		expect(peak).toBeLessThanOrEqual(8);
+	});
+});
+
+describe("homeCatalogSlots", () => {
+	it("lets a fast row land while a slow one is still out", async () => {
+		let releaseSlow = () => {};
+		const client = source({
+			getCatalog: vi.fn(async ({ id }: { id: string }) => {
+				if (id === "slow") {
+					await new Promise<void>((resolve) => {
+						releaseSlow = resolve;
+					});
+				}
+				return {
+					metas: [{ id: `${id}-1`, type: "movie" }],
+					from: { addonId: "a", addon: { manifest: { name: "A" } } },
+				};
+			}) as never,
+		});
+		const [slow, fast] = homeCatalogSlots(
+			client,
+			registryWith([ref({ id: "slow" }), ref({ id: "fast" })]),
+		);
+		expect(slow.title).toBeTruthy();
+		expect(await fast.metas).toEqual([{ id: "fast-1", type: "movie" }]);
+		releaseSlow();
+		expect(await slow.metas).toEqual([{ id: "slow-1", type: "movie" }]);
+	});
+
+	it("settles a failing row to an empty list", async () => {
+		const client = source({
+			getCatalog: vi.fn(async () => {
+				throw new Error("addon down");
+			}),
+		});
+		const [slot] = homeCatalogSlots(client, registryWith([ref({ id: "c0" })]));
+		expect(await slot.metas).toEqual([]);
 	});
 });
 

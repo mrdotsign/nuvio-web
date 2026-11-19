@@ -57,22 +57,40 @@ export function profileData(
 	const profileId = locals.profileId;
 	if (userId === undefined || profileId == null) {
 		const none = () => Promise.resolve([]);
-		return { library: none, progress: none, history: none };
+		return {
+			library: none,
+			progress: none,
+			history: none,
+			historyPage: () =>
+				Promise.resolve({ records: [], total: 0, page: 1, pageCount: 1 }),
+			historyOf: none,
+		};
 	}
 	const store = locals.services.get(USER_DATA_STORE);
 	let ready: Promise<boolean> | undefined;
+	const imported = () => {
+		ready ??= locals.services
+			.get(NUVIO_SYNC)
+			.ensureImported(userId, profileId, locals.nuvio.withFetch(fetch));
+		return ready;
+	};
 	const read =
 		<E extends "library" | "progress" | "history">(entity: E) =>
 		async () => {
-			ready ??= locals.services
-				.get(NUVIO_SYNC)
-				.ensureImported(userId, profileId, locals.nuvio.withFetch(fetch));
-			await ready;
+			await imported();
 			return store.list(userId, profileId, entity);
 		};
 	return {
 		library: read("library"),
 		progress: read("progress"),
 		history: read("history"),
+		historyPage: async (page, pageSize) => {
+			await imported();
+			return store.historyPage(userId, profileId, page, pageSize);
+		},
+		historyOf: async (contentIds) => {
+			await imported();
+			return store.historyOf(userId, profileId, [...new Set(contentIds)]);
+		},
 	};
 }

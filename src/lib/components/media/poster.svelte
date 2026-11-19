@@ -94,8 +94,9 @@
 	const watched = $derived(
 		contentType === "movie" &&
 			Boolean(
-				titleProgressFor(sync.progress, "movie", item.id, undefined)[item.id]
-					?.completed,
+				titleProgressFor(sync.progress, "movie", item.id, {
+					history: sync.history,
+				})[item.id]?.completed,
 			),
 	);
 
@@ -137,7 +138,7 @@
 
 	function toggleWatched() {
 		if (watched) {
-			sync.clearProgress({ contentId: item.id, season: null, episode: null });
+			sync.markUnwatched({ contentId: item.id, season: null, episode: null });
 			toast.success(m.media_marked_unwatched({ title: item.name }));
 		} else {
 			sync.markWatched({

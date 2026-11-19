@@ -31,3 +31,16 @@ test("watch history: direct load and client nav", async ({ page }) => {
 
 	expect(errors, "runtime errors").toEqual([]);
 });
+
+test("watch history: a page past the end clamps to the last one", async ({
+	page,
+}) => {
+	const errors = collectRuntimeErrors(page);
+	await page.goto("/account/history?page=9999");
+	await page.waitForLoadState("networkidle");
+	await expect(
+		page.getByRole("heading", { name: "Watch history", level: 1 }),
+	).toBeVisible();
+	await expect(page.getByText(/watched, newest first/)).toBeVisible();
+	expect(errors, "runtime errors").toEqual([]);
+});

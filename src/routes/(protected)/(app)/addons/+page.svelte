@@ -314,26 +314,26 @@
       {/each}
     </ul>
     {#if pageCount > 1}
-      <nav class="flex items-center justify-center gap-3" aria-label={m.addons_page({ page: currentPage, count: pageCount })}>
+      <nav class="flex items-center justify-center gap-3" aria-label={m.common_page({ page: currentPage, count: pageCount })}>
         <Button
           variant="outline"
           size="icon"
           class="rounded-full"
           disabled={currentPage === 1}
-          aria-label={m.addons_page_previous()}
+          aria-label={m.common_page_previous()}
           onclick={() => goToPage(currentPage - 1)}
         >
           <ChevronLeftIcon />
         </Button>
         <span class="text-sm text-muted-foreground tabular-nums">
-          {m.addons_page({ page: currentPage, count: pageCount })}
+          {m.common_page({ page: currentPage, count: pageCount })}
         </span>
         <Button
           variant="outline"
           size="icon"
           class="rounded-full"
           disabled={currentPage === pageCount}
-          aria-label={m.addons_page_next()}
+          aria-label={m.common_page_next()}
           onclick={() => goToPage(currentPage + 1)}
         >
           <ChevronRightIcon />

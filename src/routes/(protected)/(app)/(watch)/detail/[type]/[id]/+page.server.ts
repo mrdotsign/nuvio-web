@@ -2,6 +2,7 @@ import { similarToTitle, titleMeta } from "#lib/addons/server.js";
 import { profileData } from "#lib/userdata/server.js";
 import {
 	type TitleProgress,
+	titleContentIds,
 	titleProgressFor,
 } from "#lib/watch/playback-context.js";
 import { pullNextToAir, pullProgressRows } from "#lib/watch/watch-data.js";
@@ -38,11 +39,16 @@ export const load: PageServerLoad = ({ params, locals, fetch }) => {
 	// rows belong to this title (URL id or `tmdb:…` episode ids) is only
 	// decidable against the meta's videos. The page reads the sync store
 	// instead once it's authoritative.
-	const rows = pullProgressRows(profileData(locals, fetch)).catch(() => []);
+	const data = profileData(locals, fetch);
+	const rows = pullProgressRows(data).catch(() => []);
 	const progress = meta
-		.then(async (result) =>
-			titleProgressFor(await rows, type, id, result?.meta.videos),
-		)
+		.then(async (result) => {
+			const videos = result?.meta.videos;
+			const history = await data
+				.historyOf(titleContentIds(type, id, videos))
+				.catch(() => []);
+			return titleProgressFor(await rows, type, id, { videos, history });
+		})
 		.catch((): TitleProgress => ({}));
 
 	return { type, id, meta, similar, nextToAir, progress };

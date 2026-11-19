@@ -31,7 +31,7 @@ addons where re-resolution is slow. Remembered links are reused this way for
 A torrent the addon's debrid service doesn't have yet can still be picked when
 the addon flags its link `behaviorHints.debridDownload` (Vortex marks those ⏬).
 Opening the link sends the torrent to the debrid service. Until the file is
-there, the link answers `503` with `{"status":"downloading"}`, and the player
+there, the link answers `202` with `{"status":"downloading"}`, and the player
 shows **Sending to debrid…** then **Downloading on debrid…** instead of the
 video, asking again every 5 seconds from the server. It plays on its own once
 the link redirects to the file. A torrent nobody seeds never finishes, so the

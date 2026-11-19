@@ -12,7 +12,7 @@ const VIDEO_ID = "tt0903747:1:2";
 const DOWNLOADING_ANSWERS = 2;
 
 // An addon's debrid link for a torrent the debrid service doesn't have yet:
-// 503 `{"status":"downloading"}` until it's downloaded, then the file. The app
+// 202 `{"status":"downloading"}` until it's downloaded, then the file. The app
 // asks from its container, at this machine's network address: a private range
 // the SSRF guard lets through, unlike `host.docker.internal` on some Docker VMs
 // (198.18.0.0/15). The browser's own request for the video is routed to the
@@ -34,7 +34,7 @@ test.beforeAll(async () => {
 	server = createServer((_request, response) => {
 		asked += 1;
 		if (asked <= DOWNLOADING_ANSWERS) {
-			response.writeHead(503, {
+			response.writeHead(202, {
 				"content-type": "application/json",
 				"retry-after": "5",
 			});

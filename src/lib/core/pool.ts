@@ -26,6 +26,33 @@ export async function pooledMap<T, R>(
 }
 
 /**
+ * A gate that lets at most `limit` tasks run at once, each call keeping its
+ * own promise : `pooledMap` for when every result should land on its own
+ * instead of all together. A finishing task hands its slot to the next waiter.
+ */
+export function limiter(limit: number) {
+	let active = 0;
+	const waiting: Array<() => void> = [];
+	return async <T>(task: () => Promise<T>): Promise<T> => {
+		if (active < limit) {
+			active += 1;
+		} else {
+			await new Promise<void>((resolve) => waiting.push(resolve));
+		}
+		try {
+			return await task();
+		} finally {
+			const next = waiting.shift();
+			if (next) {
+				next();
+			} else {
+				active -= 1;
+			}
+		}
+	};
+}
+
+/**
  * Split settled outcomes into the values that fulfilled and the reasons that
  * rejected. The building block for the "count the results, count the errors"
  * checks below : works the same whether the outcomes came from `Promise.all`

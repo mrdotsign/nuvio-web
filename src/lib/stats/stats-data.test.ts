@@ -14,6 +14,8 @@ function data(): ProfileData {
 		library: async () => [],
 		progress: () => state.progressPull(),
 		history: () => state.historyPull(),
+		historyPage: async () => ({ records: [], total: 0, page: 1, pageCount: 1 }),
+		historyOf: async () => [],
 	};
 }
 

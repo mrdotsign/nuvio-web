@@ -1,4 +1,4 @@
-import { homeCatalogRows, titleMeta } from "#lib/addons/server.js";
+import { homeCatalogSlots, titleMeta } from "#lib/addons/server.js";
 import { pullLibraryItems } from "#lib/library/library-data.js";
 import { profileData } from "#lib/userdata/server.js";
 import { pullContinueWatching } from "#lib/watch/watch-data.js";
@@ -19,9 +19,11 @@ export const load: PageServerLoad = ({ locals, fetch }) => {
 		(await titleMeta(type, id))?.meta ?? null;
 	return {
 		library: pullLibraryItems(data),
-		// `[]` is a real empty feed; `null` is "couldn't reach the addons" : the
-		// page shows a retry for one and "add an addon" for the other.
 		resume: pullContinueWatching(data, metaLookup).catch(() => []),
-		rows: homeCatalogRows().catch(() => null),
+		// Row headers as soon as the (cached) addon registry is up, each row's
+		// titles as their own nested promise: a row paints when its addon
+		// answers, not when the slowest one does. `[]` is "no catalogs" (add an
+		// addon), `null` is "couldn't reach the addons" (retry).
+		rows: homeCatalogSlots().catch(() => null),
 	};
 };

@@ -189,6 +189,7 @@ export async function getAddonClient(): Promise<{
 export type {
 	CatalogSelector,
 	HomeRow,
+	HomeRowSlot,
 } from "./catalog-queries.ts";
 
 /**
@@ -204,6 +205,14 @@ export async function homeCatalogRows(): Promise<queries.HomeRow[]> {
 	const layout = pullHomeLayout(nuvio, profileId);
 	const { client, registry } = await getAddonClient();
 	return queries.homeCatalogRows(client, registry, await layout);
+}
+
+/** The home rows, each with its own `metas` promise : streamed row by row. */
+export async function homeCatalogSlots(): Promise<queries.HomeRowSlot[]> {
+	const { nuvio, profileId } = requireProfile();
+	const layout = pullHomeLayout(nuvio, profileId);
+	const { client, registry } = await getAddonClient();
+	return queries.homeCatalogSlots(client, registry, await layout);
 }
 
 export async function searchAllCatalogs(

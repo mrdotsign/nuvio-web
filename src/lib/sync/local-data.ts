@@ -1,12 +1,13 @@
 import { downloads } from "#lib/downloads/manager.svelte.js";
+import { forgetHomeCaches } from "#lib/home/home-cache.js";
 import { searchHistory } from "#lib/search/search-history.svelte.js";
 import { sync } from "./store.svelte.ts";
 
 /**
  * Drops everything the app keeps in this browser: the IndexedDB mirror of
- * every account's library / progress / history, the unflushed write queue, and
- * recent searches. Downloads keep their files (they are hours to fetch again)
- * but stop, and the offline page stops listing them.
+ * every account's library / progress / history, the unflushed write queue,
+ * recent searches and the cached home feed. Downloads keep their files (they
+ * are hours to fetch again) but stop, and the offline page stops listing them.
  *
  * Signing out only clears cookies, so without this the previous account's
  * mirror stays on the device for whoever signs in next. Called from the auth
@@ -17,6 +18,7 @@ import { sync } from "./store.svelte.ts";
  */
 export async function forgetLocalData(): Promise<void> {
 	searchHistory.forget();
+	forgetHomeCaches();
 	downloads.forget();
 	await sync.forget();
 }

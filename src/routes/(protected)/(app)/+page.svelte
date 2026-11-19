@@ -12,6 +12,7 @@
 	import { cubicOut } from "svelte/easing";
 	import { fly } from "svelte/transition";
 	import { toast } from "svelte-sonner";
+	import type { HomeRow } from "#lib/addons/catalog-queries.js";
 	import type { MetaPreview } from "#lib/addons/index.js";
 	import QueryError from "#lib/components/feedback/query-error.svelte";
 	import ContinueWatchingCard from "#lib/components/media/continue-watching-card.svelte";
@@ -23,9 +24,15 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { reduced } from "#lib/core/motion.js";
 	import { streamed } from "#lib/core/stream.svelte.js";
+	import {
+		type CachedHome,
+		readHomeCache,
+		writeHomeCache,
+	} from "#lib/home/home-cache.js";
 	import { m } from "#lib/i18n/index.js";
 	import { catalogTitles } from "#lib/settings/home-layout.js";
 	import { sync } from "#lib/sync/store.svelte.js";
+	import { syncOwner } from "#lib/sync/types.js";
 	import { cn } from "#lib/utils.js";
 	import {
 		CONTINUE_WATCHING_LIMIT,
@@ -48,7 +55,22 @@
 	const libraryStream = streamed(() => data.library, []);
 	const resumeStream = streamed(() => data.resume, []);
 	const ssrLibrary = $derived(libraryStream.current);
-	const ssrResume = $derived(resumeStream.current);
+
+	// The last home this device showed, painted right after mount (never during
+	// hydration : the server rendered skeletons) and replaced as fresh data lands.
+	const owner = $derived(
+		data.accountKey && data.profile
+			? syncOwner(data.accountKey, data.profile.profile_index)
+			: null,
+	);
+	let cached = $state<CachedHome | null>(null);
+	$effect(() => {
+		cached = owner ? readHomeCache(owner) : null;
+	});
+
+	const ssrResume = $derived(
+		resumeStream.ready ? resumeStream.current : (cached?.resume ?? []),
+	);
 
 	// Titles the viewer removed from the row this session. `sync.clearProgress`
 	// drops the underlying API row, but the SSR / store snapshot still carries it
@@ -186,28 +208,87 @@
 			: (ssrLibrary ?? []),
 	);
 
-	// Catalog rows are fetched by the load and streamed down with the page, so
-	// they don't wait on hydration plus a round trip. Still unawaited there, so
-	// a slow addon never stalls navigation : the skeletons below cover it.
+	// Catalog rows are fetched by the load and streamed down with the page: the
+	// headers first, then each row's titles as its own addon answers. Until the
+	// headers land, the cached feed stands in; a row still out shows its cached
+	// titles, else a skeleton. `fresh` is keyed by row and filled as each settles.
 	const rowsStream = streamed(
 		() => data.rows,
 		null as Awaited<typeof data.rows>,
 	);
-	const rows = $derived(rowsStream.current ?? []);
-	const rowsLoading = $derived(!rowsStream.ready);
+	const rowsLoading = $derived(!(rowsStream.ready || cached));
 	const rowsFailed = $derived(rowsStream.ready && rowsStream.current === null);
 
-	// Spotlight carousel: derived from the rows once, on first arrival, so the
-	// shuffle stays stable across re-renders.
-	let spotlights = $state<MetaPreview[]>([]);
+	type RowHeader = Omit<HomeRow, "metas">;
+	const rowKey = (row: RowHeader) => `${row.addonId}|${row.type}|${row.id}`;
+	let fresh = $state<Record<string, MetaPreview[]>>({});
 	$effect(() => {
-		if (spotlights.length > 0 || rows.length === 0) {
+		for (const slot of rowsStream.current ?? []) {
+			void slot.metas.then((metas) => {
+				fresh[rowKey(slot)] = metas;
+			});
+		}
+	});
+
+	const headers = $derived<RowHeader[]>(
+		rowsStream.ready ? (rowsStream.current ?? []) : (cached?.rows ?? []),
+	);
+	const cachedMetas = $derived(
+		new Map((cached?.rows ?? []).map((row) => [rowKey(row), row.metas])),
+	);
+	// `metas` undefined: still out, with nothing cached for it.
+	const rows = $derived(
+		headers.map((header) => ({
+			...header,
+			metas: fresh[rowKey(header)] ?? cachedMetas.get(rowKey(header)),
+		})),
+	);
+	const rowsEmpty = $derived(
+		rowsStream.ready &&
+			headers.every((header) => fresh[rowKey(header)]?.length === 0),
+	);
+
+	// Once every row has settled, keep this feed for the next visit.
+	$effect(() => {
+		const slots = rowsStream.current;
+		const resumeRows = resumeStream.ready ? resumeStream.current : null;
+		const key = owner;
+		if (!(key && slots && resumeRows)) {
+			return;
+		}
+		void Promise.all(
+			slots.map(async ({ addonId, addonName, type, id, title, metas }) => ({
+				addonId,
+				addonName,
+				type,
+				id,
+				title,
+				metas: await metas,
+			})),
+		).then((settled) =>
+			writeHomeCache(key, {
+				rows: settled.filter((row) => row.metas.length > 0),
+				resume: resumeRows,
+			}),
+		);
+	});
+
+	// Spotlight carousel: picked once, from whichever of the top rows land first
+	// (cached ones included), so the shuffle stays stable across re-renders.
+	let spotlights = $state<MetaPreview[]>([]);
+	const heroPending = $derived(
+		rowsLoading ||
+			(spotlights.length === 0 &&
+				rows.slice(0, 4).some((row) => row.metas === undefined)),
+	);
+	$effect(() => {
+		if (spotlights.length > 0) {
 			return;
 		}
 		const seen = new Set<string>();
 		const candidates = rows
 			.slice(0, 4)
-			.flatMap((row) => row.metas)
+			.flatMap((row) => row.metas ?? [])
 			.filter((meta) => {
 				if (!meta.background || seen.has(meta.id)) {
 					return false;
@@ -215,6 +296,10 @@
 				seen.add(meta.id);
 				return true;
 			});
+		// Writing `[]` here would re-trigger this effect (it reads `spotlights`).
+		if (candidates.length === 0) {
+			return;
+		}
 		for (let i = candidates.length - 1; i > 0; i--) {
 			const j = Math.floor(Math.random() * (i + 1));
 			[candidates[i], candidates[j]] = [candidates[j], candidates[i]];
@@ -356,7 +441,7 @@
 
 	// Cinemeta exposes the same catalog id ("top" → "Popular") for both movie and
 	// series, so titles collide: `catalogTitles` suffixes the repeats.
-	const rowTitles = $derived(catalogTitles(rows));
+	const rowTitles = $derived(catalogTitles(headers));
 </script>
 
 <div class="flex flex-col gap-12">
@@ -485,7 +570,7 @@
         </div>
       {/key}
     </div>
-  {:else if rowsLoading || (rows.length > 0 && spotlights.length === 0)}
+  {:else if heroPending}
     <!-- Same box as `media-hero.svelte` so the row below doesn't jump when
 		     the real hero paints. -->
     <section
@@ -558,7 +643,7 @@
           </div>
         </section>
       {/each}
-    {:else if rows.length === 0}
+    {:else if rowsEmpty}
       <div class="py-6">
         <div
           class="mx-auto max-w-md rounded-2xl border border-border/60 bg-linear-to-b from-muted/40 to-transparent px-6 py-14 text-center"
@@ -581,14 +666,29 @@
         </div>
       </div>
     {:else}
-      {#each rows as row, index (`${row.addonId}:${row.type}:${row.id}`)}
-        <MediaRow
-          title={rowTitles[index]}
-          items={row.metas}
-          href={resolve(
-            `discover?c=${encodeURIComponent(`${row.addonId}|${row.type}|${row.id}`)}`,
-          )}
-        />
+      {#each rows as row, index (rowKey(row))}
+        {#if row.metas === undefined}
+          <section class="flex flex-col gap-3">
+            <h2 class="text-xl font-semibold tracking-tight">{rowTitles[index]}</h2>
+            <div class="no-scrollbar -mx-2 max-sm:-mx-6 flex gap-4 overflow-hidden px-2 max-sm:px-6 py-1">
+              {#each { length: 8 } as _tile, tile (tile)}
+                <div class="flex w-40 shrink-0 flex-col gap-2.5 sm:w-44">
+                  <div class="skeleton aspect-2/3 rounded-xl"></div>
+                  <div class="skeleton h-3.5 w-3/4 rounded"></div>
+                  <div class="skeleton h-3 w-2/5 rounded"></div>
+                </div>
+              {/each}
+            </div>
+          </section>
+        {:else if row.metas.length > 0}
+          <MediaRow
+            title={rowTitles[index]}
+            items={row.metas}
+            href={resolve(
+              `discover?c=${encodeURIComponent(`${row.addonId}|${row.type}|${row.id}`)}`,
+            )}
+          />
+        {/if}
       {/each}
     {/if}
   </div>

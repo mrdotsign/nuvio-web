@@ -9,8 +9,9 @@ const MAX_BODY_BYTES = 4096;
 /**
  * Where a debrid link an addon flagged `debridDownload` stands. Opening it sends
  * the torrent to the debrid service; until the file is there the addon answers
- * 503 `{"status":"downloading"}`, then it redirects to the file. One byte of
+ * 202 `{"status":"downloading"}`, then it redirects to the file. One byte of
  * the file is asked for, so the redirect is followed to a link that works.
+ * Not a 503: a reverse proxy's error pages (Homerun's) replace a 5xx body.
  */
 export async function debridLinkStatus(
 	url: string,
@@ -31,11 +32,7 @@ export async function debridLinkStatus(
 	} catch {
 		return "failed";
 	}
-	if (response.ok) {
-		await response.body?.cancel().catch(() => undefined);
-		return "ready";
-	}
-	if (response.status === 503) {
+	if (response.status === 202) {
 		const body = await readJsonCapped(response, MAX_BODY_BYTES).catch(
 			() => null,
 		);
@@ -43,6 +40,10 @@ export async function debridLinkStatus(
 			return "downloading";
 		}
 		return "failed";
+	}
+	if (response.ok) {
+		await response.body?.cancel().catch(() => undefined);
+		return "ready";
 	}
 	await response.body?.cancel().catch(() => undefined);
 	return "failed";

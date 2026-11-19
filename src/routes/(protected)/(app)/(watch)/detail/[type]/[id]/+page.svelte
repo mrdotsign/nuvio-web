@@ -91,7 +91,10 @@
 	const progressStream = streamed(() => data.progress, {});
 	const progress = $derived(
 		sync.authoritative
-			? titleProgressFor(sync.progress, type, id, meta?.videos)
+			? titleProgressFor(sync.progress, type, id, {
+					videos: meta?.videos,
+					history: sync.history,
+				})
 			: progressStream.current,
 	);
 
@@ -311,7 +314,7 @@
 				id,
 				parseVideoId(type, videoId).contentId,
 			])) {
-				sync.clearProgress({ contentId, season, episode });
+				sync.markUnwatched({ contentId, season, episode });
 			}
 		} else {
 			sync.markWatched({
@@ -582,6 +585,7 @@
                         size="lg"
                         variant="outline"
                         class={`group ${heroSecondary}`}
+                        disabled={!sync.synced}
                         onclick={() =>
                             toggleWatched(
                                 id,
